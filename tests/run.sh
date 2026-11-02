@@ -57,6 +57,7 @@ assert_file_state() {
 
 make_fixture() {
     FIXTURE_NAME="$1"
+    FIXTURE_FW="${2:-MAZ_CMU-140_74.00.324}"
     FIXTURE_DIR="$TEST_TMP/$FIXTURE_NAME"
     FIXTURE_ROOT="$FIXTURE_DIR/root"
     FIXTURE_USB="$FIXTURE_DIR/usb"
@@ -64,8 +65,8 @@ make_fixture() {
     mkdir -p "$FIXTURE_ROOT/jci/gui/common/js" "$FIXTURE_ROOT/jci/scripts" \
         "$FIXTURE_ROOT/sys/class/nvram/nv-config/keys" "$FIXTURE_ROOT/data" "$FIXTURE_USB"
     cp -R "$REPO_DIR/usb/." "$FIXTURE_USB/"
-    cat > "$FIXTURE_ROOT/jci/version.ini" <<'EOF'
-JCI_SW_VER="MAZ_CMU-140_74.00.324"
+    cat > "$FIXTURE_ROOT/jci/version.ini" <<EOF
+JCI_SW_VER="$FIXTURE_FW"
 JCI_SW_VER_PATCH="A"
 EOF
     cat > "$FIXTURE_ROOT/jci/gui/common/js/Common.js" <<'EOF'
@@ -135,6 +136,61 @@ run_installer() {
 }
 
 nvram_value() { tr -d '\r\n' < "$FIXTURE_ROOT/sys/class/nvram/nv-config/keys/$1"; }
+
+# Rewrite a validated backup as if it had been produced by another profile.
+set_backup_profile() {
+    local dir="$1" profile="$2"
+    chmod 0644 "$dir/metadata"
+    sed "s/^profile=.*/profile=$profile/" "$dir/metadata" > "$dir/metadata.new"
+    mv "$dir/metadata.new" "$dir/metadata"
+    chmod 0444 "$dir/metadata"
+    chmod 0644 "$dir/metadata.sha256"
+    printf '%s  metadata\n' "$(sha256_file "$dir/metadata")" > "$dir/metadata.sha256"
+    chmod 0444 "$dir/metadata.sha256"
+}
+
+# 70.00.100A ships a different Common.js with the same registration line. Its
+# exact content needs its own profile; reusing the 74.00.324 digest would refuse
+# every v70 unit.
+V70_STOCK_SHA=5c7b0672213362c2c2103937e609b73a965e3b78015f01fbeff0dff240fd7e22
+V70_PATCHED_SHA=db17bc57780b2b67b13da8ae13759fa3c1deab29f0cd7e8d0bc42818eaf142ac
+V70_DIR="$TEST_TMP/profile-v70"
+mkdir -p "$V70_DIR"
+cat > "$V70_DIR/version.ini" <<'EOF'
+JCI_SW_VER="MAZ_CMU-150_70.00.100"
+JCI_SW_VER_PATCH="A"
+EOF
+if ! (
+    MZD_TEST_MODE=0
+    MZD_ROOT="$V70_DIR"
+    MZD_VERSION_INI="$V70_DIR/version.ini"
+    . "$REPO_DIR/usb/lib/touchtune-helpers.sh"
+    [ "$(mzd_current_firmware)" = 70.00.100A ] || exit 1
+    for fw in 70.00.100 70.00.100A; do
+        mzd_select_profile "$fw" || exit 1
+        [ "$MZD_PROFILE_ID" = mazda-connect-70.00.100-common-v1 ] || exit 1
+        [ "$MZD_PROFILE_STOCK_SHA256" = "$V70_STOCK_SHA" ] || exit 1
+        [ "$MZD_PROFILE_PATCHED_SHA256" = "$V70_PATCHED_SHA" ] || exit 1
+        [ "$MZD_PROFILE_STOCK_BYTES" = 94478 ] || exit 1
+    done
+    printf '%s\n' 'not a supported Common.js' > "$V70_DIR/Common.js"
+    if mzd_common_state "$V70_DIR/Common.js" >/dev/null 2>&1; then exit 1; fi
+); then
+    fail "70.00.100A does not select its exact Common.js profile"
+fi
+pass "70.00.100A firmware selects the exact v70 Common.js profile"
+
+if ! (
+    MZD_TEST_MODE=0
+    MZD_ROOT="$V70_DIR"
+    . "$REPO_DIR/usb/lib/touchtune-helpers.sh"
+    mzd_select_profile 74.00.324A || exit 1
+    [ "$MZD_PROFILE_ID" = mazda-connect-74.00.324-common-v1 ] || exit 1
+    [ "$MZD_PROFILE_STOCK_BYTES" = 98348 ] || exit 1
+); then
+    fail "74.00.324A profile changed while adding 70.00.100A"
+fi
+pass "74.00.324A keeps its existing profile"
 
 make_fixture lifecycle
 run_installer install || fail "first install failed: $(cat "$FIXTURE_LOG")"
@@ -297,6 +353,33 @@ assert_file_state stock "$FIXTURE_COMMON"
 [ ! -e "$FIXTURE_ROOT/data/touchtune" ] || fail "state created before firmware refusal"
 grep -q 'firmware 74.00.331 is unsupported' "$FIXTURE_LOG" || fail "firmware refusal was not diagnosed"
 pass "unsupported firmware is refused before state or system mutation"
+
+make_fixture firmware_70 "MAZ_CMU-150_70.00.100"
+run_installer install || fail "70.00.100A install failed: $(cat "$FIXTURE_LOG")"
+assert_file_state patched "$FIXTURE_COMMON"
+assert_eq "$(nvram_value bus_bcm_speed_restriction)" disable "v70 bus NVRAM after install"
+assert_eq "$(nvram_value lvds_speed_restriction)" disable "v70 LVDS NVRAM after install"
+run_installer uninstall || fail "70.00.100A uninstall failed: $(cat "$FIXTURE_LOG")"
+assert_file_state stock "$FIXTURE_COMMON"
+assert_eq "$(nvram_value bus_bcm_speed_restriction)" enable "v70 bus NVRAM after uninstall"
+assert_eq "$(nvram_value lvds_speed_restriction)" enable "v70 LVDS NVRAM after uninstall"
+pass "70.00.100A installs and removes the same one-line change"
+
+# Backups are tied to the firmware version. A structurally valid backup from a
+# different profile must stop the run instead of being reused.
+make_fixture cross_profile_backup
+cp -p "$FIXTURE_COMMON" "$FIXTURE_DIR/stock-entry.js"
+run_installer install || fail "setup install for cross-profile backup failed"
+cp -p "$FIXTURE_DIR/stock-entry.js" "$FIXTURE_COMMON"
+BACKUP_DIR="$FIXTURE_ROOT/data/touchtune/backups/common-js"
+set_backup_profile "$BACKUP_DIR" test-other-common-v1
+if run_installer install; then fail "backup from another firmware profile was accepted"; fi
+assert_file_state stock "$FIXTURE_COMMON"
+assert_eq "$(nvram_value bus_bcm_speed_restriction)" disable "NVRAM changed after cross-profile refusal"
+grep -q 'belongs to another profile' "$FIXTURE_LOG" || fail "cross-profile refusal was not diagnosed"
+if run_installer uninstall; then fail "uninstall accepted a backup from another firmware profile"; fi
+assert_file_state stock "$FIXTURE_COMMON"
+pass "a backup from another firmware profile is refused"
 
 make_fixture corrupt_backup
 run_installer install || fail "setup install for corrupt backup failed"

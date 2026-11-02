@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- Support `70.00.100` / `70.00.100A` with its own exact `Common.js` profile.
+  The v70 file has the same one-line registration target but different content,
+  so it needs separate stock and patched digests. The profile comes from the
+  EU `70.00.100A` reinstall package and has not been bench-tested.
+- Test v70 profile selection, the `74.00.324A` regression, a v70
+  install/remove cycle, and refusal of a backup recorded under another
+  firmware profile. Backups remain tied to the firmware version; remove
+  TouchTune before changing firmware.
+
 ## 1.2.1 (2026-09-22)
 
 - Keep the mode and ownership of the `Common.js` found on the CMU instead of

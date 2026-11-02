@@ -6,13 +6,21 @@ removal limited to those changes.
 
 ## Recognizing the file
 
-Firmware must be `74.00.324` or `74.00.324A`. The production profile in
-`usb/lib/touchtune-helpers.sh` recognizes these complete file contents:
+Firmware must be `70.00.100`, `70.00.100A`, `74.00.324`, or `74.00.324A`.
+The production profiles in `usb/lib/touchtune-helpers.sh` recognize these
+complete file contents:
 
-| State | Bytes, for reference | SHA-256 |
-| --- | ---: | --- |
-| Stock | 98,348 | `376b30a46366a543122956d7feb1b44f147425015837a4d83fedf12a67943351` |
-| TouchTune | 98,375 | `019eba18e8d629ddb1d55563aab138ce1eb3329fab67b71d9b4178377cf9d9ce` |
+| Firmware | State | Bytes, for reference | SHA-256 |
+| --- | --- | ---: | --- |
+| 70.00.100 / 70.00.100A | Stock | 94,478 | `5c7b0672213362c2c2103937e609b73a965e3b78015f01fbeff0dff240fd7e22` |
+| 70.00.100 / 70.00.100A | TouchTune | 94,505 | `db17bc57780b2b67b13da8ae13759fa3c1deab29f0cd7e8d0bc42818eaf142ac` |
+| 74.00.324 | Stock | 98,348 | `376b30a46366a543122956d7feb1b44f147425015837a4d83fedf12a67943351` |
+| 74.00.324 | TouchTune | 98,375 | `019eba18e8d629ddb1d55563aab138ce1eb3329fab67b71d9b4178377cf9d9ce` |
+
+The v70 digests come from the EU `70.00.100A` reinstall package. That profile
+has not been bench-tested; the 74.00.324A profile remains the validated one.
+The non-`A` version string is accepted, but the file itself must still match
+the v70 digest.
 
 The full digest verifies the content, including its final registration and the
 one changed line. Runtime anchor-count and tail checks are unnecessary once
@@ -57,8 +65,10 @@ or an interrupted NVRAM commit. Host tests do not model those hardware effects.
 its profile and original settings, and a digest of that metadata. The existing
 `touchtune-backup-v3` format remains readable. It is built in a temporary
 directory, fully validated and flushed, then renamed into place. A failed write
-must never publish an incomplete backup. Existing backups are verified and
-never overwritten.
+must never publish an incomplete backup. An existing backup is verified and
+never overwritten, including its firmware profile. A backup recorded under a
+different profile is refused; remove TouchTune before updating or reinstalling
+the CMU firmware instead of reusing it.
 
 For an exact 1.1 patched file without a private backup, reversing the known line
 change must produce the exact stock digest. The original 1.1 installer used

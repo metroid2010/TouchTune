@@ -5,14 +5,16 @@
 
 TouchTune keeps the Mazda Connect touchscreen enabled while the car is moving.
 It is a free, open-source USB installer for **Gen 6 Mazda Connect
-74.00.324 / 74.00.324A**. There is no account, desktop app, or configuration.
+70.00.100 / 70.00.100A and 74.00.324 / 74.00.324A**. There is no account,
+desktop app, or configuration.
 
 ![TouchTune install prompt on Mazda Connect](docs/touchtune-install-prompt.png)
 
 ## Install
 
 1. Check your firmware in **Settings → System → About**. It must be
-   **74.00.324** or **74.00.324A**. See the [firmware guide](https://miatafy.com/mazda-connect/check-firmware/).
+   **70.00.100**, **70.00.100A**, **74.00.324**, or **74.00.324A**. See the
+   [firmware guide](https://miatafy.com/mazda-connect/check-firmware/).
 2. Prepare an empty USB stick formatted **FAT32 with an MBR partition map**.
    [USB requirements](https://miatafy.com/support/usb-requirements/)
 3. Extract the release ZIP onto the USB root. From a source checkout, copy the
@@ -76,14 +78,25 @@ See the [changelog](CHANGELOG.md) and [developer notes](SAFETY.md) for details.
 
 ## Compatibility
 
-TouchTune supports the Gen 6 `74.00.324` / `74.00.324A` firmware family and the
-exact stock or TouchTune-patched `Common.js` described in the developer notes.
-It refuses other versions and unknown modifications to that file. The About
-screen sometimes omits the trailing `A`.
+TouchTune supports the Gen 6 `70.00.100` / `70.00.100A` family and the
+`74.00.324` / `74.00.324A` family, with the exact stock or TouchTune-patched
+`Common.js` described in the developer notes. It refuses other versions and
+unknown modifications to that file. The About screen sometimes omits the
+trailing `A`; both spellings are accepted, but the file content must still
+match a known profile.
 
-The inspected NA and EU firmware copies contain the same supported file. Bench
-testing uses a 2019 CX-5 CMU with NA 74.00.324A; this does not establish support
-for every vehicle or region. [Vehicle compatibility](https://miatafy.com/compatibility/supported-vehicles/)
+The v70 profile comes from the EU `70.00.100A` reinstall package. Its
+`Common.js` has the same registration line but different content, so v70 and
+v74 use separate digests. The v70 profile has not been bench-tested by the
+maintainers; the 74.00.324A profile remains the bench-validated one.
+
+A backup is tied to the firmware version that created it. Remove TouchTune
+before updating or reinstalling the CMU firmware; a backup recorded under a
+different profile is refused and is never reused.
+
+The inspected NA and EU 74 firmware copies contain the same supported file.
+Bench testing uses a 2019 CX-5 CMU with NA 74.00.324A; this does not establish
+support for every vehicle or region. [Vehicle compatibility](https://miatafy.com/compatibility/supported-vehicles/)
 
 ## Contributing
 

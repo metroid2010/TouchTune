@@ -36,4 +36,5 @@ TouchTune does not redistribute Mazda firmware images or a complete Mazda
 `Common.js`. The source includes the small strings and update metadata needed
 to identify and modify the supported file. No code, configuration, licensing
 data, vehicle-binding data, or assets from Miatafy's proprietary products are
-included. Target firmware is v74.00.324A.
+included. Target firmware is v70.00.100 / v70.00.100A and
+v74.00.324 / v74.00.324A.

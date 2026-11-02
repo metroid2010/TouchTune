@@ -1,5 +1,6 @@
 #!/bin/sh
-# Install or remove TouchTune on Mazda Connect 74.00.324 and 74.00.324A.
+# Install or remove TouchTune on Mazda Connect 70.00.100 / 70.00.100A and
+# 74.00.324 / 74.00.324A.
 # TouchTune has no warranty. See LICENSE, NOTICE, and SOURCE.txt on this USB.
 
 REPO_DIR=$(CDPATH='' cd "$(dirname "$0")" && pwd) || exit 1

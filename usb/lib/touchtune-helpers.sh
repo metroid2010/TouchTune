@@ -23,8 +23,7 @@ MZD_OPENSSL="${MZD_OPENSSL:-/usr/bin/openssl}"
 MZD_FSYNC="${MZD_FSYNC:-/bin/fsync}"
 [ -x "$MZD_FSYNC" ] || MZD_FSYNC=$(command -v fsync 2>/dev/null || true)
 
-MZD_SUPPORTED_BASE_FW="74.00.324"
-MZD_SUPPORTED_FW="74.00.324A"
+MZD_SUPPORTED_FW="70.00.100 / 70.00.100A and 74.00.324 / 74.00.324A"
 MZD_PROFILE_ID=""
 MZD_PROFILE_STOCK_SHA256=""
 MZD_PROFILE_PATCHED_SHA256=""
@@ -75,7 +74,13 @@ mzd_current_firmware() {
 mzd_select_profile() {
     local fw="$1"
     case "$fw" in
-        "$MZD_SUPPORTED_BASE_FW"|"$MZD_SUPPORTED_FW")
+        70.00.100|70.00.100A)
+            MZD_PROFILE_ID="mazda-connect-70.00.100-common-v1"
+            MZD_PROFILE_STOCK_SHA256="5c7b0672213362c2c2103937e609b73a965e3b78015f01fbeff0dff240fd7e22"
+            MZD_PROFILE_PATCHED_SHA256="db17bc57780b2b67b13da8ae13759fa3c1deab29f0cd7e8d0bc42818eaf142ac"
+            MZD_PROFILE_STOCK_BYTES="94478"
+            ;;
+        74.00.324|74.00.324A)
             MZD_PROFILE_ID="mazda-connect-74.00.324-common-v1"
             MZD_PROFILE_STOCK_SHA256="376b30a46366a543122956d7feb1b44f147425015837a4d83fedf12a67943351"
             MZD_PROFILE_PATCHED_SHA256="019eba18e8d629ddb1d55563aab138ce1eb3329fab67b71d9b4178377cf9d9ce"
@@ -198,7 +203,7 @@ mzd_common_state() {
         "$MZD_PROFILE_STOCK_SHA256") printf '%s\n' stock ;;
         "$MZD_PROFILE_PATCHED_SHA256") printf '%s\n' patched ;;
         *)
-            mzd_log "ERROR: Common.js is neither the stock nor the TouchTune file for $MZD_SUPPORTED_BASE_FW (sha256=$digest); TouchTune only replaces files it recognizes"
+            mzd_log "ERROR: Common.js is neither the stock nor the TouchTune file for profile $MZD_PROFILE_ID (sha256=$digest); TouchTune only replaces files it recognizes"
             return 1
             ;;
     esac
